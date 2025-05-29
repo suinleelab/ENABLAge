@@ -15,10 +15,16 @@ class SHAP_Age:
         self.task = None
 
     def fit(self, prediction, age, expected_value_list, age_list):
-        popt, pcov = curve_fit(lambda t,a,b,c: np.exp(a*t+b)+np.min(prediction)+c, np.array(age), prediction, maxfev=10000)
-        if popt[2] >= 0:
-            popt, pcov = curve_fit(lambda t,a,b: np.exp(a*t+b)+np.min(prediction)-0.1, np.array(age), prediction, maxfev=10000)
-            popt = np.append(popt, -0.1)
+        # Bounds for c (popt[2]) are set to ensure it's a small negative number.
+        # This prevents model_predict_min + c from exceeding x in get_shap_age,
+        # which would cause np.log(x - model_predict_min - c) to be undefined.
+        popt, pcov = curve_fit(
+            lambda t,a,b,c: np.exp(a*t+b)+np.min(prediction)+c,
+            np.array(age),
+            prediction,
+            maxfev=10000,
+            bounds=([-np.inf, -np.inf, -np.inf], [np.inf, np.inf, -1e-5])
+        )
         print(popt[2])
         self.popt = popt
         self.pcov = pcov
